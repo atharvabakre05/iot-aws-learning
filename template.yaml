@@ -1,0 +1,64 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+
+Description: Phase 21 redo notification infrastructure
+
+Resources:
+  NotificationFailureQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600
+      SqsManagedSseEnabled: true
+
+  NotificationQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      VisibilityTimeout: 90
+      MessageRetentionPeriod: 345600
+      SqsManagedSseEnabled: true
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt NotificationFailureQueue.Arn
+        maxReceiveCount: 3
+
+  NotificationConsumer:
+    Type: AWS::Serverless::Function
+    Properties:
+      Runtime: python3.12
+      Architectures:
+        - x86_64
+      Handler: index.lambda_handler
+      MemorySize: 128
+      Timeout: 15
+
+      InlineCode: |
+        def lambda_handler(event, context):
+            records = event.get("Records", [])
+
+            print(
+                f"PHASE 21 REDO: received "
+                f"{len(records)} SQS record(s)"
+            )
+
+            return {
+                "processed_records": len(records)
+            }
+
+      Events:
+        NotificationQueueTrigger:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt NotificationQueue.Arn
+            BatchSize: 1
+
+Outputs:
+  NotificationQueueUrl:
+    Description: Main notification queue URL
+    Value: !Ref NotificationQueue
+
+  NotificationFailureQueueUrl:
+    Description: Notification failure queue URL
+    Value: !Ref NotificationFailureQueue
+
+  NotificationConsumerName:
+    Description: Notification consumer Lambda name
+    Value: !Ref NotificationConsumer
