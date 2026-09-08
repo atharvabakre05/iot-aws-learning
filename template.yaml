@@ -26,22 +26,10 @@ Resources:
       Runtime: python3.12
       Architectures:
         - x86_64
-      Handler: index.lambda_handler
+      CodeUri: src/notification_consumer/
+      Handler: app.lambda_handler
       MemorySize: 128
       Timeout: 15
-
-      InlineCode: |
-        def lambda_handler(event, context):
-            records = event.get("Records", [])
-
-            print(
-                f"PHASE 21 REDO: received "
-                f"{len(records)} SQS record(s)"
-            )
-
-            return {
-                "processed_records": len(records)
-            }
 
       Events:
         NotificationQueueTrigger:

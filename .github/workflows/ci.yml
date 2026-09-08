@@ -12,15 +12,26 @@ permissions:
   contents: read
 
 jobs:
-  validate-and-build:
+  validate-test-and-build:
     runs-on: ubuntu-latest
 
     steps:
       - name: Download repository
         uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Install AWS SAM CLI
         uses: aws-actions/setup-sam@v2
+
+      - name: Check Python syntax
+        run: python -m compileall -q src
+
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
 
       - name: Validate SAM template
         run: sam validate --template-file template.yaml --lint
